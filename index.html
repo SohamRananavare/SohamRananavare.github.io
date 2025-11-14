@@ -1,923 +1,326 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Cracker Pro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #1e293b;
-            --light: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --gray-800: #1e293b;
-            --gray-900: #0f172a;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --border-radius: 0.5rem;
-            --transition: all 0.2s ease-in-out;
-        }
+import React, { useState, useEffect } from 'react';
+import { Shield, Lock, Unlock, AlertCircle, CheckCircle } from 'lucide-react';
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+export default function BruteForceSimulator() {
+  const [targetPassword, setTargetPassword] = useState('pass');
+  const [customPassword, setCustomPassword] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentAttempt, setCurrentAttempt] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [cracked, setCracked] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [charset, setCharset] = useState('lowercase');
+  const [maxLength, setMaxLength] = useState(4);
+  const [batchSize, setBatchSize] = useState(1000);
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            color: var(--gray-800);
-            background-color: var(--light);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+  const charsets = {
+    numbers: '0123456789',
+    lowercase: 'abcdefghijklmnopqrstuvwxyz',
+    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    alphanumeric: '0123456789abcdefghijklmnopqrstuvwxyz',
+    full: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%'
+  };
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-        }
+  useEffect(() => {
+    let timeout;
+    if (isRunning && !cracked) {
+      timeout = setTimeout(() => {
+        generateBatchAttempts();
+      }, speed);
+    }
+    return () => clearTimeout(timeout);
+  }, [isRunning, currentAttempt, cracked]);
 
-        /* Header Styles */
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 2.5rem 0;
-            margin-bottom: 3rem;
-            box-shadow: var(--shadow);
-        }
+  const generateBatchAttempts = () => {
+    const chars = charsets[charset];
+    let next = currentAttempt || chars[0];
+    let count = 0;
+    
+    while (count < batchSize && next.length <= maxLength) {
+      if (next === targetPassword) {
+        setCurrentAttempt(next);
+        setAttempts(prev => prev + count + 1);
+        setCracked(true);
+        setIsRunning(false);
+        return;
+      }
+      
+      next = incrementString(next, chars);
+      count++;
+      
+      if (next.length > maxLength) {
+        setIsRunning(false);
+        setCurrentAttempt(next);
+        setAttempts(prev => prev + count);
+        return;
+      }
+    }
+    
+    setCurrentAttempt(next);
+    setAttempts(prev => prev + count);
+  };
 
-        .header-content {
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+  const incrementString = (str, chars) => {
+    const arr = str.split('');
+    let i = arr.length - 1;
+    
+    while (i >= 0) {
+      const currentIndex = chars.indexOf(arr[i]);
+      if (currentIndex < chars.length - 1) {
+        arr[i] = chars[currentIndex + 1];
+        return arr.join('');
+      } else {
+        arr[i] = chars[0];
+        i--;
+      }
+    }
+    
+    return chars[0] + arr.join('');
+  };
 
-        .header-icon {
-            background: rgba(255, 255, 255, 0.2);
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1.5rem;
-        }
+  const startAttack = () => {
+    setIsRunning(true);
+    setCracked(false);
+    setAttempts(0);
+    setCurrentAttempt('');
+  };
 
-        .header-icon i {
-            width: 32px;
-            height: 32px;
-            color: white;
-        }
+  const stopAttack = () => {
+    setIsRunning(false);
+  };
 
-        .header-content h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-            line-height: 1.2;
-        }
+  const resetSimulation = () => {
+    setIsRunning(false);
+    setCracked(false);
+    setAttempts(0);
+    setCurrentAttempt('');
+  };
 
-        .header-content p {
-            font-size: 1.125rem;
-            opacity: 0.9;
-            max-width: 600px;
-            margin: 0 auto;
-        }
+  const setPresetPassword = (password) => {
+    setTargetPassword(password);
+    resetSimulation();
+  };
 
-        /* Card Styles */
-        .card {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+  const applyCustomPassword = () => {
+    if (customPassword) {
+      setTargetPassword(customPassword);
+      resetSimulation();
+    }
+  };
 
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
+  const calculateEstimatedAttempts = () => {
+    const chars = charsets[charset];
+    const pwdLen = targetPassword.length;
+    let total = 0;
+    for (let i = 1; i <= pwdLen; i++) {
+      total += Math.pow(chars.length, i);
+    }
+    return total;
+  };
 
-        .card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .card-header h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            color: var(--gray-800);
-        }
-
-        .card-header i {
-            color: var(--primary);
-        }
-
-        /* Form Elements */
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--gray-700);
-        }
-
-        .input-group {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-group input,
-        .input-group select {
-            width: 100%;
-            padding: 0.75rem 1rem 0.75rem 3rem;
-            border: 1px solid var(--gray-300);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            transition: var(--transition);
-            font-family: 'Inter', sans-serif;
-        }
-
-        .input-group input:focus,
-        .input-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-        }
-
-        .input-group .icon {
-            position: absolute;
-            left: 1rem;
-            color: var(--gray-400);
-            pointer-events: none;
-        }
-
-        /* Button Styles */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-        }
-
-        .btn i {
-            width: 1.25rem;
-            height: 1.25rem;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #dc2626;
-            transform: translateY(-1px);
-        }
-
-        .btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        /* Console Output */
-        .console {
-            background-color: var(--gray-900);
-            color: #e2e8f0;
-            font-family: 'Fira Code', 'Courier New', monospace;
-            padding: 1.25rem;
-            border-radius: var(--border-radius);
-            height: 250px;
-            overflow-y: auto;
-            margin-top: 1.5rem;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            border: 1px solid var(--gray-800);
-        }
-
-        .console-line {
-            margin: 0;
-            padding: 0.25rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-family: 'Fira Code', monospace;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .console-line:last-child {
-            border-bottom: none;
-        }
-
-        .text-success {
-            color: var(--success);
-        }
-
-        .text-warning {
-            color: var(--warning);
-        }
-
-        .text-danger {
-            color: var(--danger);
-        }
-
-        .text-muted {
-            color: var(--gray-500);
-        }
-
-        /* Stats Grid */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            text-align: center;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin: 0.5rem 0;
-            line-height: 1.2;
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            font-weight: 500;
-        }
-
-        /* Progress Bar */
-        .progress-container {
-            width: 100%;
-            height: 8px;
-            background-color: var(--gray-200);
-            border-radius: 4px;
-            margin: 1.5rem 0;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
-            width: 0%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(
-                90deg,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.2) 50%,
-                rgba(255, 255, 255, 0) 100%
-            );
-            animation: progress-shine 2s infinite;
-        }
-
-        @keyframes progress-shine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1.5rem 1rem;
-            }
-
-            header {
-                padding: 2rem 0;
-                margin-bottom: 2rem;
-            }
-
-            .header-content h1 {
-                font-size: 2rem;
-            }
-
-            .header-content p {
-                font-size: 1rem;
-            }
-
-            .card {
-                padding: 1.5rem;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-
-        /* Utility Classes */
-        .mt-1 { margin-top: 0.25rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mt-3 { margin-top: 0.75rem; }
-        .mt-4 { margin-top: 1rem; }
-        .mt-6 { margin-top: 1.5rem; }
-        .mt-8 { margin-top: 2rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .text-center { text-align: center; }
-        .w-full { width: 100%; }
-        .flex { display: flex; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .gap-4 { gap: 1rem; }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="header-content">
-            <div class="header-icon">
-                <i data-lucide="shield"></i>
-            </div>
-            <h1>Password Cracker Pro</h1>
-            <p>Advanced password security analysis and testing tool</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Shield className="w-12 h-12 text-purple-400" />
+            <h1 className="text-4xl font-bold text-white">Brute Force Attack Simulator</h1>
+          </div>
+          <p className="text-gray-300">Educational tool to demonstrate password security</p>
         </div>
-    </header>
 
-    <div class="container">
-        <div class="card animate-fade-in">
-            <div class="card-header">
-                <h2><i data-lucide="lock"></i> Password Cracker</h2>
-            </div>
-            
-            <div class="form-group">
-                <label for="targetPassword">Target Password</label>
-                <div class="input-group">
-                    <i data-lucide="key" class="icon"></i>
-                    <input type="text" id="targetPassword" placeholder="Enter password to crack (e.g., pass123)">
-                </div>
-                <p class="text-muted mt-2">Use a short password (3-4 characters) for quick results</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="charset">Character Set</label>
-                <div class="input-group">
-                    <i data-lucide="list" class="icon"></i>
-                    <select id="charset">
-                        <option value="numbers">Numbers (0-9)</option>
-                        <option value="lowercase" selected>Lowercase Letters (a-z)</option>
-                        <option value="uppercase">Uppercase Letters (A-Z)</option>
-                        <option value="alphanumeric">Alphanumeric (a-z, 0-9)</option>
-                        <option value="full">Full (a-z, A-Z, 0-9, !@#$) - Slower</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="speed">Speed</label>
-                <div class="input-group">
-                    <i data-lucide="gauge" class="icon"></i>
-                    <select id="speed">
-                        <option value="100">Fast</option>
-                        <option value="300" selected>Normal</option>
-                        <option value="700">Slow</option>
-                        <option value="1500">Very Slow</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="flex gap-4">
-                <button id="startBtn" class="btn btn-primary flex-1">
-                    <i data-lucide="play"></i> Start Cracking
-                </button>
-                <button id="stopBtn" class="btn btn-danger" style="display: none;">
-                    <i data-lucide="stop-circle"></i> Stop
-                </button>
-            </div>
-            
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-            
-            <div class="console" id="consoleOutput">
-                <p class="console-line"><span class="text-muted">[System]</span> Ready to start password cracking...</p>
-            </div>
-            
-            <div class="stats" id="statsContainer">
-                <div class="stat-card">
-                    <div class="stat-label">Attempts</div>
-                    <div class="stat-value" id="attemptsCount">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Time Elapsed</div>
-                    <div class="stat-value" id="timeElapsed">0s</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Speed</div>
-                    <div class="stat-value" id="crackSpeed">0/s</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card animate-fade-in" style="animation-delay: 0.1s;">
-            <div class="card-header">
-                <h2><i data-lucide="shield"></i> Password Strength Checker</h2>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Test Password Strength</label>
-                <div class="input-group">
-                    <i data-lucide="key" class="icon"></i>
-                    <input type="password" id="password" placeholder="Enter a password to test">
-                </div>
-            </div>
-            
-            <div class="progress-container">
-                <div class="progress-bar" id="strengthMeter" style="width: 0%;"></div>
-            </div>
-            
-            <div id="strengthText" class="text-center mt-2"></div>
-            
-            <button id="analyzeBtn" class="btn btn-primary w-full mt-4">
-                <i data-lucide="activity"></i> Analyze Password
+        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <Lock className="w-5 h-5" />
+            Target Password Configuration
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <button
+              onClick={() => setPresetPassword('123')}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            >
+              Weak: "123"
             </button>
-            
-            <div id="analysisResult" class="mt-6" style="display: none;">
-                <h3 class="text-lg font-semibold mb-3">Analysis Results</h3>
-                <div id="resultContent" class="space-y-3"></div>
-            </div>
-        </div>
-        
-        <footer class="text-center text-sm text-gray-500 mt-8 mb-4">
-            <p>© 2025 Password Cracker Pro | Educational Purposes Only</p>
-            <p class="mt-1">This tool is for educational purposes only. Always use strong, unique passwords and enable two-factor authentication.</p>
-        </footer>
-    </div>
+            <button
+              onClick={() => setPresetPassword('pass')}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded"
+            >
+              Weak: "pass"
+            </button>
+            <button
+              onClick={() => setPresetPassword('hello')}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
+            >
+              Medium: "hello"
+            </button>
+            <button
+              onClick={() => setPresetPassword('p4ssw0rd')}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              Strong: "p4ssw0rd"
+            </button>
+          </div>
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-        
-        // Password cracker functionality
-        const charsets = {
-            numbers: '0123456789',
-            lowercase: 'abcdefghijklmnopqrstuvwxyz',
-            uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            alphanumeric: '0123456789abcdefghijklmnopqrstuvwxyz',
-            full: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?'
-        };
-        
-        let crackerWorker = null;
-        let startTime = null;
-        let lastUpdateTime = null;
-        let attempts = 0;
-        let attemptsAtLastUpdate = 0;
-        let isCracking = false;
-        
-        // DOM Elements
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const targetPasswordInput = document.getElementById('targetPassword');
-        const consoleOutput = document.getElementById('consoleOutput');
-        const progressBar = document.getElementById('progressBar');
-        const attemptsCount = document.getElementById('attemptsCount');
-        const timeElapsed = document.getElementById('timeElapsed');
-        const crackSpeed = document.getElementById('crackSpeed');
-        const statsContainer = document.getElementById('statsContainer');
-        
-        // Password strength checker elements
-        const passwordInput = document.getElementById('password');
-        const strengthMeter = document.getElementById('strengthMeter');
-        const strengthText = document.getElementById('strengthText');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const analysisResult = document.getElementById('analysisResult');
-        const resultContent = document.getElementById('resultContent');
-        
-        // Event Listeners
-        startBtn.addEventListener('click', startCracking);
-        stopBtn.addEventListener('click', () => stopCracking(false));
-        analyzeBtn.addEventListener('click', analyzePassword);
-        passwordInput.addEventListener('input', checkPasswordStrength);
-        
-        // Password cracker functions
-        function startCracking() {
-            const targetPassword = targetPasswordInput.value.trim();
-            const selectedCharset = document.getElementById('charset').value;
-            const speed = parseInt(document.getElementById('speed').value);
-            
-            if (!targetPassword) {
-                addConsoleMessage('Please enter a password to crack', 'error');
-                return;
-            }
-            
-            if (targetPassword.length > 10) {
-                addConsoleMessage('Please enter a password with 10 or fewer characters', 'error');
-                return;
-            }
-            
-            // Reset state
-            attempts = 0;
-            attemptsAtLastUpdate = 0;
-            startTime = Date.now();
-            lastUpdateTime = startTime;
-            isCracking = true;
-            
-            // Update UI
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'inline-flex';
-            progressBar.style.width = '0%';
-            attemptsCount.textContent = '0';
-            timeElapsed.textContent = '0s';
-            crackSpeed.textContent = '0/s';
-            statsContainer.style.display = 'grid';
-            
-            // Clear console and add initial message
-            consoleOutput.innerHTML = '';
-            addConsoleMessage('🚀 Starting brute force attack...', 'info');
-            addConsoleMessage(`🎯 Target: ${'•'.repeat(targetPassword.length)} (${targetPassword.length} chars)`, 'info');
-            addConsoleMessage(`🔤 Character set: ${selectedCharset}`, 'info');
-            addConsoleMessage('⏳ Cracking in progress...', 'info');
-            
-            // In a real app, this would be a Web Worker or API call
-            crackerWorker = setInterval(() => {
-                if (!isCracking) return;
-                
-                // Simulate cracking attempts
-                const batchSize = 1000;
-                attempts += batchSize;
-                
-                // Check if we found the password (for demo purposes, we'll use a simple check)
-                const now = Date.now();
-                const timeElapsedMs = now - startTime;
-                const timeElapsedSec = timeElapsedMs / 1000;
-                
-                // Update UI every 100ms
-                if (now - lastUpdateTime >= 100) {
-                    updateCrackerUI();
-                    lastUpdateTime = now;
-                }
-                
-                // For demo: If we've tried enough attempts, consider it found
-                const passwordFound = attempts >= 5000 && Math.random() < 0.1;
-                
-                if (passwordFound) {
-                    stopCracking(true);
-                    const timeTaken = timeElapsedSec.toFixed(2);
-                    const attemptsPerSec = Math.round(attempts / (timeElapsedSec || 1));
-                    
-                    addConsoleMessage(`✅ Password found after ${attempts.toLocaleString()} attempts!`, 'success');
-                    addConsoleMessage(`🔑 Password: ${targetPassword}`, 'success');
-                    addConsoleMessage(`⏱️ Time taken: ${timeTaken} seconds`, 'success');
-                    addConsoleMessage(`⚡ Average speed: ${attemptsPerSec.toLocaleString()} attempts/second`, 'success');
-                    
-                    // Update progress to 100%
-                    progressBar.style.width = '100%';
-                }
-            }, speed);
-        }
-        
-        function stopCracking(success = false) {
-            isCracking = false;
-            
-            if (crackerWorker) {
-                clearInterval(crackerWorker);
-                crackerWorker = null;
-            }
-            
-            if (!success) {
-                addConsoleMessage('⏹️ Operation stopped by user', 'warning');
-            }
-            
-            startBtn.style.display = 'inline-flex';
-            stopBtn.style.display = 'none';
-        }
-        
-        function updateCrackerUI() {
-            if (!startTime) return;
-            
-            const now = Date.now();
-            const timeElapsedMs = now - startTime;
-            const timeElapsedSec = timeElapsedMs / 1000;
-            const deltaTime = (now - lastUpdateTime) / 1000;
-            const deltaAttempts = attempts - attemptsAtLastUpdate;
-            const attemptsPerSec = deltaTime > 0 ? Math.round(deltaAttempts / deltaTime) : 0;
-            
-            // Update stats
-            attemptsCount.textContent = attempts.toLocaleString();
-            timeElapsed.textContent = timeElapsedSec.toFixed(1) + 's';
-            crackSpeed.textContent = attemptsPerSec.toLocaleString() + '/s';
-            
-            // Update progress bar (for demo purposes, this is just an estimate)
-            const progress = Math.min(99, Math.floor(Math.pow(attempts / 1000, 0.5) * 10));
-            progressBar.style.width = `${progress}%`;
-            
-            attemptsAtLastUpdate = attempts;
-            lastUpdateTime = now;
-            
-            // Add progress update to console every 5000 attempts
-            if (attempts > 0 && attempts % 5000 === 0) {
-                addConsoleMessage(`🔍 Tried ${attempts.toLocaleString()} combinations...`, 'info');
-            }
-        }
-        
-        function addConsoleMessage(message, type = 'info') {
-            const now = new Date();
-            const timestamp = now.toLocaleTimeString();
-            const messageEl = document.createElement('p');
-            messageEl.className = 'console-line';
-            
-            let typeClass = '';
-            switch(type) {
-                case 'success':
-                    typeClass = 'text-success';
-                    break;
-                case 'error':
-                    typeClass = 'text-danger';
-                    break;
-                case 'warning':
-                    typeClass = 'text-warning';
-                    break;
-                case 'info':
-                default:
-                    typeClass = 'text-muted';
-            }
-            
-            messageEl.innerHTML = `<span class="${typeClass}">[${timestamp}] ${message}</span>`;
-            consoleOutput.appendChild(messageEl);
-            consoleOutput.scrollTop = consoleOutput.scrollHeight;
-        }
-        
-        // Password strength checker functions
-        function checkPasswordStrength() {
-            const password = passwordInput.value;
-            
-            if (!password) {
-                strengthMeter.style.width = '0%';
-                strengthMeter.style.backgroundColor = '';
-                strengthText.textContent = '';
-                return;
-            }
-            
-            let strength = 0;
-            let feedback = [];
-            
-            // Length check
-            if (password.length < 8) {
-                feedback.push('Too short (min 8 characters)');
-            } else if (password.length >= 12) {
-                strength += 25;
-            } else {
-                strength += 15;
-            }
-            
-            // Check for different character types
-            const hasLower = /[a-z]/.test(password);
-            const hasUpper = /[A-Z]/.test(password);
-            const hasNumbers = /\d/.test(password);
-            const hasSymbols = /[^A-Za-z0-9]/.test(password);
-            
-            if (hasLower) strength += 10;
-            if (hasUpper) strength += 10;
-            if (hasNumbers) strength += 10;
-            if (hasSymbols) strength += 15;
-            
-            // Check for common patterns
-            const commonPatterns = [
-                '123', 'abc', 'qwerty', 'password', 'admin', 'welcome', 'letmein'
-            ];
-            
-            if (commonPatterns.some(pattern => 
-                password.toLowerCase().includes(pattern))) {
-                strength = Math.max(5, strength - 20);
-                feedback.push('Contains common patterns');
-            }
-            
-            // Check for repeated characters
-            if (/(\w)\1{2,}/.test(password)) {
-                strength = Math.max(5, strength - 10);
-                feedback.push('Repeated characters reduce strength');
-            }
-            
-            // Check for sequences
-            const sequences = ['abcdef', '123456', 'qwerty', 'asdfgh', 'zxcvbn'];
-            if (sequences.some(seq => password.toLowerCase().includes(seq))) {
-                strength = Math.max(5, strength - 15);
-                feedback.push('Sequential characters reduce strength');
-            }
-            
-            // Cap the strength at 100
-            strength = Math.min(100, Math.max(0, strength));
-            
-            // Update the UI
-            strengthMeter.style.width = `${strength}%`;
-            
-            // Set color based on strength
-            let strengthLabel = '';
-            if (strength < 30) {
-                strengthMeter.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-                strengthLabel = 'Weak';
-            } else if (strength < 70) {
-                strengthMeter.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-                strengthLabel = 'Moderate';
-            } else if (strength < 90) {
-                strengthMeter.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
-                strengthLabel = 'Strong';
-            } else {
-                strengthMeter.style.background = 'linear-gradient(90deg, #3b82f6, #60a5fa)';
-                strengthLabel = 'Very Strong';
-            }
-            
-            // Add feedback if any
-            if (feedback.length > 0) {
-                strengthText.textContent = `${strengthLabel} - ${feedback.join(', ')}`;
-            } else {
-                strengthText.textContent = strengthLabel;
-            }
-            
-            strengthText.className = strength < 70 ? 'text-center mt-2 text-warning' : 'text-center mt-2 text-success';
-        }
-        
-        function analyzePassword() {
-            const password = passwordInput.value;
-            
-            if (!password) {
-                alert('Please enter a password to analyze');
-                return;
-            }
-            
-            // Show loading state
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Analyzing...';
-            lucide.createIcons();
-            
-            // Simulate analysis (in a real app, this would be an API call)
-            setTimeout(() => {
-                // Generate analysis results
-                const hasLower = /[a-z]/.test(password);
-                const hasUpper = /[A-Z]/.test(password);
-                const hasNumbers = /\d/.test(password);
-                const hasSymbols = /[^A-Za-z0-9]/.test(password);
-                
-                const length = password.length;
-                const uniqueChars = new Set(password).size;
-                const entropy = Math.log2(Math.pow(74, length)); // 26+26+10+12 symbols
-                
-                // Create HTML for results
-                let html = `
-                    <div class="mb-4">
-                        <h4 class="font-medium mb-2">Password Analysis</h4>
-                        <p>Length: ${length} characters (${uniqueChars} unique)</p>
-                        <p>Estimated entropy: ${entropy.toFixed(2)} bits</p>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="font-medium mb-2">Character Types</h4>
-                        <p class="flex items-center">
-                            ${hasLower ? '<i data-lucide="check-circle" class="text-success mr-2"></i>' : '<i data-lucide="x-circle" class="text-danger mr-2"></i>'}
-                            Lowercase letters
-                        </p>
-                        <p class="flex items-center">
-                            ${hasUpper ? '<i data-lucide="check-circle" class="text-success mr-2"></i>' : '<i data-lucide="x-circle" class="text-warning mr-2"></i>'}
-                            Uppercase letters
-                        </p>
-                        <p class="flex items-center">
-                            ${hasNumbers ? '<i data-lucide="check-circle" class="text-success mr-2"></i>' : '<i data-lucide="x-circle" class="text-warning mr-2"></i>'}
-                            Numbers
-                        </p>
-                        <p class="flex items-center">
-                            ${hasSymbols ? '<i data-lucide="check-circle" class="text-success mr-2"></i>' : '<i data-lucide="x-circle" class="text-warning mr-2"></i>'}
-                            Symbols
-                        </p>
-                    </div>
-                    
-                    <div>
-                        <h4 class="font-medium mb-2">Security Tips</h4>
-                `;
-                
-                const tips = [];
-                if (length < 12) tips.push('Use at least 12 characters');
-                if (!hasLower) tips.push('Add lowercase letters');
-                if (!hasUpper) tips.push('Add uppercase letters');
-                if (!hasNumbers) tips.push('Add numbers');
-                if (!hasSymbols) tips.push('Add symbols');
-                
-                if (tips.length === 0) {
-                    html += '<p class="text-success"><i data-lucide="shield-check" class="mr-2"></i>Your password meets all basic security requirements. Good job!</p>';
-                } else {
-                    html += '<ul class="list-disc pl-5 space-y-1">';
-                    tips.forEach(tip => {
-                        html += `<li>${tip}</li>`;
-                    });
-                    html += '</ul>';
-                }
-                
-                html += '</div>';
-                
-                // Update the UI
-                resultContent.innerHTML = html;
-                analysisResult.style.display = 'block';
-                
-                // Reset button state
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '<i data-lucide="activity"></i> Analyze Password';
-                
-                // Re-initialize Lucide icons
-                lucide.createIcons();
-                
-                // Scroll to results
-                analysisResult.scrollIntoView({ behavior: 'smooth' });
-            }, 800);
-        }
-        
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', () => {
-            // Add event listeners for demo purposes
-            passwordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    analyzePassword();
-                }
-            });
-            
-            targetPasswordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    startCracking();
-                }
-            });
-            
-            // Show initial state
-            statsContainer.style.display = 'none';
-        });
-    </script>
-</body>
-</html>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customPassword}
+              onChange={(e) => setCustomPassword(e.target.value)}
+              placeholder="Enter custom password"
+              className="flex-1 bg-gray-700 text-white px-4 py-2 rounded"
+            />
+            <button
+              onClick={applyCustomPassword}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+            >
+              Set Custom
+            </button>
+          </div>
+
+          <div className="mt-4 p-4 bg-gray-700 rounded">
+            <p className="text-gray-300 text-sm">Current Target: <span className="text-white font-mono font-bold">{targetPassword}</span></p>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Attack Configuration</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-gray-300 block mb-2">Character Set:</label>
+              <select
+                value={charset}
+                onChange={(e) => setCharset(e.target.value)}
+                className="w-full bg-gray-700 text-white px-4 py-2 rounded"
+                disabled={isRunning}
+              >
+                <option value="numbers">Numbers (0-9)</option>
+                <option value="lowercase">Lowercase (a-z)</option>
+                <option value="uppercase">Uppercase (A-Z)</option>
+                <option value="alphanumeric">Alphanumeric (a-z, 0-9)</option>
+                <option value="full">Full (a-z, A-Z, 0-9, symbols)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-gray-300 block mb-2">Speed: {speed}ms per batch</label>
+              <input
+                type="range"
+                min="1"
+                max="100"
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                className="w-full"
+                disabled={isRunning}
+              />
+            </div>
+
+            <div>
+              <label className="text-gray-300 block mb-2">Batch Size: {batchSize.toLocaleString()} attempts per batch</label>
+              <input
+                type="range"
+                min="100"
+                max="10000"
+                step="100"
+                value={batchSize}
+                onChange={(e) => setBatchSize(Number(e.target.value))}
+                className="w-full"
+                disabled={isRunning}
+              />
+            </div>
+
+            <div>
+              <label className="text-gray-300 block mb-2">Max Password Length: {maxLength}</label>
+              <input
+                type="range"
+                min="1"
+                max="8"
+                value={maxLength}
+                onChange={(e) => setMaxLength(Number(e.target.value))}
+                className="w-full"
+                disabled={isRunning}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Attack Status</h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="bg-gray-700 p-4 rounded">
+                <p className="text-gray-400 text-sm">Attempts</p>
+                <p className="text-3xl font-bold text-purple-400">{attempts.toLocaleString()}</p>
+              </div>
+              <div className="bg-gray-700 p-4 rounded">
+                <p className="text-gray-400 text-sm">Current Attempt</p>
+                <p className="text-2xl font-mono text-white">{currentAttempt || '---'}</p>
+              </div>
+            </div>
+
+            {cracked && (
+              <div className="bg-green-900 border-2 border-green-500 rounded-lg p-4 flex items-center gap-3">
+                <Unlock className="w-8 h-8 text-green-400" />
+                <div>
+                  <p className="text-green-400 font-bold text-lg">Password Cracked!</p>
+                  <p className="text-green-300">Found: {currentAttempt} in {attempts.toLocaleString()} attempts</p>
+                </div>
+              </div>
+            )}
+
+            {!cracked && !isRunning && attempts > 0 && (
+              <div className="bg-yellow-900 border-2 border-yellow-500 rounded-lg p-4 flex items-center gap-3">
+                <AlertCircle className="w-8 h-8 text-yellow-400" />
+                <div>
+                  <p className="text-yellow-400 font-bold">Attack Stopped</p>
+                  <p className="text-yellow-300">Password not found yet</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              {!isRunning ? (
+                <button
+                  onClick={startAttack}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold"
+                >
+                  Start Attack
+                </button>
+              ) : (
+                <button
+                  onClick={stopAttack}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold"
+                >
+                  Stop Attack
+                </button>
+              )}
+              <button
+                onClick={resetSimulation}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl">
+          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            Security Insights
+          </h2>
+          <div className="space-y-2 text-gray-300">
+            <p>• Estimated worst-case attempts: <span className="text-purple-400 font-bold">{calculateEstimatedAttempts().toLocaleString()}</span></p>
+            <p>• Character set size: <span className="text-purple-400 font-bold">{charsets[charset].length}</span></p>
+            <p>• Target password length: <span className="text-purple-400 font-bold">{targetPassword.length}</span></p>
+            <p className="mt-4 pt-4 border-t border-gray-700 text-sm">
+              <strong>Educational Note:</strong> This simulator demonstrates why longer passwords with mixed characters are more secure. Real brute force attacks are prevented by rate limiting, account lockouts, and strong encryption.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
