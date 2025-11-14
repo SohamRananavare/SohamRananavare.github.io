@@ -1,326 +1,369 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Unlock, AlertCircle, CheckCircle } from 'lucide-react';
-
-export default function BruteForceSimulator() {
-  const [targetPassword, setTargetPassword] = useState('pass');
-  const [customPassword, setCustomPassword] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  const [currentAttempt, setCurrentAttempt] = useState('');
-  const [attempts, setAttempts] = useState(0);
-  const [cracked, setCracked] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [charset, setCharset] = useState('lowercase');
-  const [maxLength, setMaxLength] = useState(4);
-  const [batchSize, setBatchSize] = useState(1000);
-
-  const charsets = {
-    numbers: '0123456789',
-    lowercase: 'abcdefghijklmnopqrstuvwxyz',
-    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    alphanumeric: '0123456789abcdefghijklmnopqrstuvwxyz',
-    full: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%'
-  };
-
-  useEffect(() => {
-    let timeout;
-    if (isRunning && !cracked) {
-      timeout = setTimeout(() => {
-        generateBatchAttempts();
-      }, speed);
-    }
-    return () => clearTimeout(timeout);
-  }, [isRunning, currentAttempt, cracked]);
-
-  const generateBatchAttempts = () => {
-    const chars = charsets[charset];
-    let next = currentAttempt || chars[0];
-    let count = 0;
-    
-    while (count < batchSize && next.length <= maxLength) {
-      if (next === targetPassword) {
-        setCurrentAttempt(next);
-        setAttempts(prev => prev + count + 1);
-        setCracked(true);
-        setIsRunning(false);
-        return;
-      }
-      
-      next = incrementString(next, chars);
-      count++;
-      
-      if (next.length > maxLength) {
-        setIsRunning(false);
-        setCurrentAttempt(next);
-        setAttempts(prev => prev + count);
-        return;
-      }
-    }
-    
-    setCurrentAttempt(next);
-    setAttempts(prev => prev + count);
-  };
-
-  const incrementString = (str, chars) => {
-    const arr = str.split('');
-    let i = arr.length - 1;
-    
-    while (i >= 0) {
-      const currentIndex = chars.indexOf(arr[i]);
-      if (currentIndex < chars.length - 1) {
-        arr[i] = chars[currentIndex + 1];
-        return arr.join('');
-      } else {
-        arr[i] = chars[0];
-        i--;
-      }
-    }
-    
-    return chars[0] + arr.join('');
-  };
-
-  const startAttack = () => {
-    setIsRunning(true);
-    setCracked(false);
-    setAttempts(0);
-    setCurrentAttempt('');
-  };
-
-  const stopAttack = () => {
-    setIsRunning(false);
-  };
-
-  const resetSimulation = () => {
-    setIsRunning(false);
-    setCracked(false);
-    setAttempts(0);
-    setCurrentAttempt('');
-  };
-
-  const setPresetPassword = (password) => {
-    setTargetPassword(password);
-    resetSimulation();
-  };
-
-  const applyCustomPassword = () => {
-    if (customPassword) {
-      setTargetPassword(customPassword);
-      resetSimulation();
-    }
-  };
-
-  const calculateEstimatedAttempts = () => {
-    const chars = charsets[charset];
-    const pwdLen = targetPassword.length;
-    let total = 0;
-    for (let i = 1; i <= pwdLen; i++) {
-      total += Math.pow(chars.length, i);
-    }
-    return total;
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Shield className="w-12 h-12 text-purple-400" />
-            <h1 className="text-4xl font-bold text-white">Brute Force Attack Simulator</h1>
-          </div>
-          <p className="text-gray-300">Educational tool to demonstrate password security</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Cracker Pro</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #111827 0%, #4c1d95 50%, #111827 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+        }
+    </style>
+</head>
+<body class="text-gray-100 p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <i data-lucide="shield" class="w-12 h-12 text-purple-400"></i>
+                <h1 class="text-4xl font-bold text-white">Password Cracker Pro</h1>
+            </div>
+            <p class="text-gray-300">Educational tool to demonstrate password security</p>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Target Password Configuration
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <button
-              onClick={() => setPresetPassword('123')}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-            >
-              Weak: "123"
-            </button>
-            <button
-              onClick={() => setPresetPassword('pass')}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded"
-            >
-              Weak: "pass"
-            </button>
-            <button
-              onClick={() => setPresetPassword('hello')}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded"
-            >
-              Medium: "hello"
-            </button>
-            <button
-              onClick={() => setPresetPassword('p4ssw0rd')}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Strong: "p4ssw0rd"
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={customPassword}
-              onChange={(e) => setCustomPassword(e.target.value)}
-              placeholder="Enter custom password"
-              className="flex-1 bg-gray-700 text-white px-4 py-2 rounded"
-            />
-            <button
-              onClick={applyCustomPassword}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
-            >
-              Set Custom
-            </button>
-          </div>
-
-          <div className="mt-4 p-4 bg-gray-700 rounded">
-            <p className="text-gray-300 text-sm">Current Target: <span className="text-white font-mono font-bold">{targetPassword}</span></p>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Attack Configuration</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-300 block mb-2">Character Set:</label>
-              <select
-                value={charset}
-                onChange={(e) => setCharset(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded"
-                disabled={isRunning}
-              >
-                <option value="numbers">Numbers (0-9)</option>
-                <option value="lowercase">Lowercase (a-z)</option>
-                <option value="uppercase">Uppercase (A-Z)</option>
-                <option value="alphanumeric">Alphanumeric (a-z, 0-9)</option>
-                <option value="full">Full (a-z, A-Z, 0-9, symbols)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-gray-300 block mb-2">Speed: {speed}ms per batch</label>
-              <input
-                type="range"
-                min="1"
-                max="100"
-                value={speed}
-                onChange={(e) => setSpeed(Number(e.target.value))}
-                className="w-full"
-                disabled={isRunning}
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-300 block mb-2">Batch Size: {batchSize.toLocaleString()} attempts per batch</label>
-              <input
-                type="range"
-                min="100"
-                max="10000"
-                step="100"
-                value={batchSize}
-                onChange={(e) => setBatchSize(Number(e.target.value))}
-                className="w-full"
-                disabled={isRunning}
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-300 block mb-2">Max Password Length: {maxLength}</label>
-              <input
-                type="range"
-                min="1"
-                max="8"
-                value={maxLength}
-                onChange={(e) => setMaxLength(Number(e.target.value))}
-                className="w-full"
-                disabled={isRunning}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Attack Status</h2>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-gray-700 p-4 rounded">
-                <p className="text-gray-400 text-sm">Attempts</p>
-                <p className="text-3xl font-bold text-purple-400">{attempts.toLocaleString()}</p>
-              </div>
-              <div className="bg-gray-700 p-4 rounded">
-                <p className="text-gray-400 text-sm">Current Attempt</p>
-                <p className="text-2xl font-mono text-white">{currentAttempt || '---'}</p>
-              </div>
-            </div>
-
-            {cracked && (
-              <div className="bg-green-900 border-2 border-green-500 rounded-lg p-4 flex items-center gap-3">
-                <Unlock className="w-8 h-8 text-green-400" />
+        <!-- Password Cracker Section -->
+        <div class="glass-card rounded-lg p-6 mb-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4">Password Cracker</h2>
+            
+            <div class="space-y-4">
                 <div>
-                  <p className="text-green-400 font-bold text-lg">Password Cracked!</p>
-                  <p className="text-green-300">Found: {currentAttempt} in {attempts.toLocaleString()} attempts</p>
+                    <label class="block text-gray-300 mb-2">Enter Target Password:</label>
+                    <div class="flex gap-2">
+                        <input type="password" id="targetPassword" value="pass" 
+                            class="flex-1 bg-gray-700 text-white px-4 py-2 rounded">
+                        <button onclick="togglePasswordVisibility()" 
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
-              </div>
-            )}
 
-            {!cracked && !isRunning && attempts > 0 && (
-              <div className="bg-yellow-900 border-2 border-yellow-500 rounded-lg p-4 flex items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-yellow-400" />
-                <div>
-                  <p className="text-yellow-400 font-bold">Attack Stopped</p>
-                  <p className="text-yellow-300">Password not found yet</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-300 mb-2">Character Set:</label>
+                        <select id="charset" class="w-full bg-gray-700 text-white px-4 py-2 rounded">
+                            <option value="numbers">Numbers (0-9)</option>
+                            <option value="lowercase" selected>Lowercase (a-z)</option>
+                            <option value="uppercase">Uppercase (A-Z)</option>
+                            <option value="alphanumeric">Alphanumeric (a-z, 0-9)</option>
+                            <option value="full">Full (a-z, A-Z, 0-9, symbols)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 mb-2">Speed:</label>
+                        <input type="range" id="speed" min="1" max="100" value="50" 
+                            class="w-full" oninput="updateSpeedValue()">
+                        <div id="speedValue" class="text-sm text-gray-400">Speed: 50ms</div>
+                    </div>
                 </div>
-              </div>
-            )}
 
-            <div className="flex gap-4">
-              {!isRunning ? (
-                <button
-                  onClick={startAttack}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold"
-                >
-                  Start Attack
-                </button>
-              ) : (
-                <button
-                  onClick={stopAttack}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold"
-                >
-                  Stop Attack
-                </button>
-              )}
-              <button
-                onClick={resetSimulation}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold"
-              >
-                Reset
-              </button>
+                <div class="flex gap-4 mt-6">
+                    <button id="startBtn" onclick="startCracking()" 
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        Start Cracking
+                    </button>
+                    <button id="stopBtn" onclick="stopCracking()" disabled
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold">
+                        Stop
+                    </button>
+                </div>
+
+                <div class="mt-6 bg-gray-800 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-400">Progress:</span>
+                        <span id="progress" class="font-mono">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-4">
+                        <div id="progressBar" class="bg-purple-600 h-4 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-gray-700 p-3 rounded">
+                            <p class="text-gray-400 text-sm">Attempts</p>
+                            <p id="attempts" class="text-2xl font-bold text-purple-400">0</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <p class="text-gray-400 text-sm">Current Attempt</p>
+                            <p id="currentAttempt" class="text-xl font-mono">---</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="result" class="hidden p-4 rounded-lg"></div>
             </div>
-          </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-6 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" />
-            Security Insights
-          </h2>
-          <div className="space-y-2 text-gray-300">
-            <p>• Estimated worst-case attempts: <span className="text-purple-400 font-bold">{calculateEstimatedAttempts().toLocaleString()}</span></p>
-            <p>• Character set size: <span className="text-purple-400 font-bold">{charsets[charset].length}</span></p>
-            <p>• Target password length: <span className="text-purple-400 font-bold">{targetPassword.length}</span></p>
-            <p className="mt-4 pt-4 border-t border-gray-700 text-sm">
-              <strong>Educational Note:</strong> This simulator demonstrates why longer passwords with mixed characters are more secure. Real brute force attacks are prevented by rate limiting, account lockouts, and strong encryption.
-            </p>
-          </div>
+        <!-- Password Strength Checker -->
+        <div class="glass-card rounded-lg p-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4">Password Strength Checker</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 mb-2">Test Password Strength:</label>
+                    <input type="password" id="passwordInput" 
+                        class="w-full bg-gray-700 text-white px-4 py-2 rounded" 
+                        placeholder="Enter a password to test">
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <div class="flex justify-between mb-1">
+                        <span id="strengthText" class="text-sm">Strength:</span>
+                        <span id="strengthScore" class="text-sm font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div id="strengthMeter" class="h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="strengthFeedback" class="mt-2 text-sm text-gray-400"></div>
+                </div>
+
+                <div id="passwordFeedback" class="space-y-2"></div>
+            </div>
         </div>
-      </div>
     </div>
-  );
-}
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // DOM Elements
+        const targetPasswordInput = document.getElementById('targetPassword');
+        const charsetSelect = document.getElementById('charset');
+        const speedInput = document.getElementById('speed');
+        const speedValue = document.getElementById('speedValue');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progress');
+        const attemptsDisplay = document.getElementById('attempts');
+        const currentAttemptDisplay = document.getElementById('currentAttempt');
+        const resultDiv = document.getElementById('result');
+        const passwordInput = document.getElementById('passwordInput');
+        const strengthMeter = document.getElementById('strengthMeter');
+        const strengthText = document.getElementById('strengthText');
+        const strengthScore = document.getElementById('strengthScore');
+        const strengthFeedback = document.getElementById('strengthFeedback');
+        const passwordFeedback = document.getElementById('passwordFeedback');
+
+        // Character sets
+        const charsets = {
+            numbers: '0123456789',
+            lowercase: 'abcdefghijklmnopqrstuvwxyz',
+            uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            alphanumeric: '0123456789abcdefghijklmnopqrstuvwxyz',
+            full: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?'
+        };
+
+        // Cracking variables
+        let isCracking = false;
+        let crackerInterval;
+        let attempts = 0;
+        let currentAttempt = '';
+        let charset = charsets.lowercase;
+
+        // Update speed display
+        function updateSpeedValue() {
+            speedValue.textContent = `Speed: ${speedInput.value}ms`;
+        }
+
+        // Toggle password visibility
+        function togglePasswordVisibility() {
+            const type = targetPasswordInput.type === 'password' ? 'text' : 'password';
+            targetPasswordInput.type = type;
+            const icon = targetPasswordInput.nextElementSibling.querySelector('i');
+            icon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        }
+
+        // Start cracking
+        function startCracking() {
+            if (isCracking) return;
+            
+            const targetPassword = targetPasswordInput.value;
+            if (!targetPassword) {
+                showResult('Please enter a target password', 'error');
+                return;
+            }
+
+            isCracking = true;
+            attempts = 0;
+            currentAttempt = '';
+            charset = charsets[charsetSelect.value];
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            resultDiv.className = 'hidden';
+            
+            crackerInterval = setInterval(() => {
+                if (!isCracking) return;
+                
+                // Generate next attempt
+                currentAttempt = getNextAttempt(currentAttempt, charset);
+                attempts++;
+                
+                // Update UI
+                attemptsDisplay.textContent = attempts.toLocaleString();
+                currentAttemptDisplay.textContent = currentAttempt;
+                
+                // Check if password is cracked
+                if (currentAttempt === targetPassword) {
+                    stopCracking();
+                    showResult(`Password cracked in ${attempts} attempts! The password is: ${currentAttempt}`, 'success');
+                }
+                
+                // Update progress
+                const progress = Math.min(100, Math.floor((attempts / 10000) * 100));
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${progress}%`;
+                
+            }, parseInt(speedInput.value));
+        }
+
+        // Stop cracking
+        function stopCracking() {
+            isCracking = false;
+            clearInterval(crackerInterval);
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        // Generate next attempt
+        function getNextAttempt(current, chars) {
+            if (!current) return chars[0];
+            
+            let next = '';
+            let i = current.length - 1;
+            let carry = true;
+            
+            for (; i >= 0 && carry; i--) {
+                const charIndex = chars.indexOf(current[i]);
+                if (charIndex < chars.length - 1) {
+                    next = chars[charIndex + 1] + next;
+                    carry = false;
+                } else {
+                    next = chars[0] + next;
+                }
+            }
+            
+            if (carry) {
+                return chars[0] + next;
+            }
+            
+            return current.substring(0, i + 1) + next;
+        }
+
+        // Show result message
+        function showResult(message, type) {
+            resultDiv.className = `p-4 rounded-lg ${
+                type === 'error' ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'
+            }`;
+            resultDiv.textContent = message;
+            resultDiv.classList.remove('hidden');
+        }
+
+        // Password strength checker
+        passwordInput.addEventListener('input', () => {
+            const password = passwordInput.value;
+            const strength = calculatePasswordStrength(password);
+            updateStrengthMeter(strength);
+            providePasswordFeedback(password, strength);
+        });
+
+        // Calculate password strength (0-100)
+        function calculatePasswordStrength(password) {
+            if (!password) return 0;
+            
+            let strength = 0;
+            const length = password.length;
+            
+            // Length check
+            strength += Math.min(100, length * 5);
+            
+            // Character variety
+            const hasLower = /[a-z]/.test(password);
+            const hasUpper = /[A-Z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+            
+            const varietyCount = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
+            strength += (varietyCount - 1) * 15;
+            
+            // Deductions for common patterns
+            if (/(.)\1{2,}/.test(password)) strength -= 20; // Repeated characters
+            if (/^[0-9]+$/.test(password)) strength -= 30; // Numbers only
+            if (/^[a-zA-Z]+$/.test(password)) strength -= 25; // Letters only
+            
+            // Common password check (very basic)
+            const commonPasswords = ['password', '123456', 'qwerty', 'letmein', 'admin'];
+            if (commonPasswords.includes(password.toLowerCase())) {
+                strength = Math.max(5, strength - 50);
+            }
+            
+            return Math.max(0, Math.min(100, strength));
+        }
+
+        // Update strength meter UI
+        function updateStrengthMeter(strength) {
+            strengthMeter.style.width = `${strength}%`;
+            strengthScore.textContent = `${strength}%`;
+            
+            if (strength < 30) {
+                strengthMeter.className = 'h-2.5 rounded-full bg-red-500';
+                strengthText.textContent = 'Weak';
+            } else if (strength < 70) {
+                strengthMeter.className = 'h-2.5 rounded-full bg-yellow-500';
+                strengthText.textContent = 'Moderate';
+            } else {
+                strengthMeter.className = 'h-2.5 rounded-full bg-green-500';
+                strengthText.textContent = 'Strong';
+            }
+        }
+
+        // Provide password feedback
+        function providePasswordFeedback(password, strength) {
+            let feedback = [];
+            const hasLower = /[a-z]/.test(password);
+            const hasUpper = /[A-Z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+            
+            if (password.length < 8) {
+                feedback.push('Password should be at least 8 characters long');
+            }
+            
+            if (!hasLower) feedback.push('Add lowercase letters');
+            if (!hasUpper) feedback.push('Add uppercase letters');
+            if (!hasNumber) feedback.push('Add numbers');
+            if (!hasSpecial) feedback.push('Add special characters (!@#$%^&*)');
+            
+            if (feedback.length === 0) {
+                feedback.push('Great password!');
+            }
+            
+            passwordFeedback.innerHTML = feedback.map(item => 
+                `<div class="flex items-center gap-2 text-sm ${item === 'Great password!' ? 'text-green-400' : 'text-yellow-400'}">
+                    <i data-lucide="${item === 'Great password!' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4"></i>
+                    ${item}
+                </div>`
+            ).join('');
+            
+            lucide.createIcons();
+        }
+
+        // Initialize
+        updateSpeedValue();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
